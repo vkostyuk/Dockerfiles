@@ -11,6 +11,8 @@ LABEL maintainer="Victor Kostyuk <v.kostyuk@gmail.com>"
 
 # Change these in the Dockerfile to customize
 ARG CUSER=vkostyuk 
+ARG GIT_USER_NAME="Victor Kostyuk"
+ARG GIT_USER_EMAIL="v.kostyuk@gmail.com"
 ARG TZ=America/New_York
 ARG DOTFILE_REPO=https://github.com/vkostyuk/config-files.git
 
@@ -59,6 +61,7 @@ RUN apt-get update \
 	fish \
 	git \
 	gnuplot \
+	htop \
 	ipython3 \
 	npm \
 	pandoc \
@@ -86,6 +89,7 @@ RUN pip3 install --upgrade pip \
 	csvkit \
 	flake8 \
 	jupyter \
+	jupyter_contrib_nbextensions \
 	matplotlib \
 	numpy \
 	pandas \
@@ -95,6 +99,9 @@ RUN pip3 install --upgrade pip \
 
 RUN npm install -g \
 	json2csv
+
+# Install Jupyter nbextension
+RUN jupyter contrib nbextension install --system --symlink
 
 # Install csvfix
 RUN set -x \
@@ -137,7 +144,7 @@ RUN set -x \
 # Set up user ------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-# Add user, default shell fish
+# Add user, default shell bash
 RUN /usr/sbin/useradd --create-home --shell /bin/bash --no-user-group --uid $CUID $CUSER
 
 # Allow passwordless sudo for CUSER
@@ -162,8 +169,8 @@ WORKDIR $HOME
 # --build-args CACHEBUST=$(date +%s)
 ARG CACHEBUST=1
 RUN	git clone --bare $DOTFILE_REPO $HOME/.myconf \
-    && config config --local status.showUntrackedFiles no \
-	&& config checkout 
+	&& config config --local status.showUntrackedFiles no \
+	&& config checkout
 
 # Install Vundle (Vim plugin manager)
 RUN git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
@@ -178,25 +185,33 @@ RUN vim -c 'PluginInstall' -c 'qa!' \
 # Since as of 05/2018 Docker has no conditional copy operation, this uses a trick described
 # here http://redgreenrepeat.com/2018/04/13/how-to-conditionally-copy-file-in-dockerfile/
 RUN mkdir .ssh
+SHELL ["/bin/bash", "-c"]
 COPY Dockerfile $KEY_FILE* $HOME/.ssh/
-RUN sudo chmod 600 $HOME/.ssh/$KEY_FILE* \
-	&& sudo chown -R $CUSER:users $HOME/.ssh \
-	&& rm -f $HOME/.ssh/Dockerfile
+RUN rm -f $HOME/.ssh/Dockerfile \
+		&& [[ $(ls -A $HOME/.ssh) ]] \
+		&& ( sudo chmod 600 $HOME/.ssh/$KEY_FILE* \
+			&& sudo chown -R $CUSER:users $HOME/.ssh ) \
+		|| echo "No key found"
+
 
 # If key(s) present, and $DOTFILE_REPO is github, then configure $DOTFILE_REPO 
 # to use SSH (git@github) so that you can push
-SHELL ["/bin/bash", "-c"]
 RUN [[ $(ls -A $HOME/.ssh) && $DOTFILE_REPO = *"github.com"* ]] \
 	&& REPO_USER=`echo $DOTFILE_REPO | sed -Ene's#https://github.com/([^/]*)/(.*).git#\1#p'` \
 	&& REPO_ADDR=`echo $DOTFILE_REPO | sed -Ene's#https://github.com/([^/]*)/(.*).git#\2#p'` \
 	&& [[ -n $REPO_USER && -n $REPO_ADDR ]] \
-	&& config remote set-url origin "git@github.com:$REPO_USER/$REPO_ADDR.git"
-	
+	&& config remote set-url origin "git@github.com:$REPO_USER/$REPO_ADDR.git" \
+	|| echo "No key found"
+
+# Set global name and email options in Git
+RUN git config --global user.name $GIT_USER_NAME \
+	&& git config --global user.email $GIT_USER_EMAIL
+
 # ------------------------------------------------------------------------------
 # Expose port to use with Jupyter ----------------------------------------------
 # ------------------------------------------------------------------------------
 
-EXPOSE 8888
+EXPOSE 8042
 
 ENTRYPOINT ["/usr/local/bin/tini", "--"]
 
