@@ -68,6 +68,7 @@ RUN apt-get update \
 	python-dev \
 	python-setuptools \
 	python3-pip \
+	python3-tk \
 	python3.6 \
 	python3.6-dev \
 	r-base \
