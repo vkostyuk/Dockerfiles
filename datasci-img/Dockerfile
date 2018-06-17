@@ -87,6 +87,7 @@ RUN pip3 install --upgrade pip \
 	&& pip install \
 	awscli \
 	bokeh \
+	coloredlogs \
 	csvkit \
 	flake8 \
 	jupyter \
@@ -193,7 +194,6 @@ RUN rm -f $HOME/.ssh/Dockerfile \
 		&& ( sudo chmod 600 $HOME/.ssh/$KEY_FILE* \
 			&& sudo chown -R $CUSER:users $HOME/.ssh ) \
 		|| echo "No key found"
-
 
 # If key(s) present, and $DOTFILE_REPO is github, then configure $DOTFILE_REPO 
 # to use SSH (git@github) so that you can push
