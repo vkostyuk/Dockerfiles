@@ -90,6 +90,7 @@ RUN pip3 install --upgrade pip \
 	coloredlogs \
 	csvkit \
 	flake8 \
+	ipdb \
 	jupyter \
 	jupyter_contrib_nbextensions \
 	matplotlib \
